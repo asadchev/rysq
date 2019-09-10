@@ -24,7 +24,7 @@ namespace rysq {
     }
     RYSQ_GPU_ENABLED
     bool compute(double x, double *X, double *W) const {
-      return stieltjes_.template compute<N>(x, X, W);
+      return stieltjes_.template compute<N ? N : 1>(x, X, W);
     }
   private:
     static const int K = stieltjes_grid_size<N>::value;

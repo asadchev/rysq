@@ -1,121 +1,70 @@
 #ifndef RYSQ_RYSQ_H
 #define RYSQ_RYSQ_H
 
-#include <stdint.h>
+#include "rysq/config.h"
+#include "rysq/constants.h"
+#include "rysq/shell.h"
+#include "rysq/vector.h"
+
 #include <memory>
-
-#ifndef RYSQ_MAX_AM
-#define RYSQ_MAX_AM 5
-#endif
-
-#if (RYSQ_MAX_AM < 0)
-#error "RYSQ_MAX_AM is invalid"
-#endif
-
-#define RYSQ_MAX_CART (((RYSQ_MAX_AM+2)*(RYSQ_MAX_AM+1))/2)
-
-#ifdef __CUDACC__
-#define RYSQ_GPU_ENABLED __host__ __device__
-#else
-#define RYSQ_GPU_ENABLED
-#endif
+#include <string>
 
 namespace rysq {
 
-  struct Vector3 {
-    double x,y,z;
-  };
+  typedef Vector<double,3> Vector3;
 
-  inline int nbf(int L) {
-    int n = L+1;
-    return ((n*n+n)/2);
-  }
+  using ::rysq::shell::Shell;
+  using ::rysq::shell::Bra;
+  using ::rysq::shell::Ket;
 
-  struct Shell {
+  template<class Bra, class Ket>
+  struct Kernel2e {
 
-    struct Orbital {
-      //uint16_t x:4, y:4, z:4;
-      uint16_t x, y, z;
-    }; //  __attribute__((aligned(16)));
+    const Bra bra;
+    const Ket ket;
 
-    const int L;
-    const double a, C;
-
-    Shell(int L, double a, double C)
-      : L(L), a(a), C(C)
-    {
-      auto it = this->orbitals_;
-      for (int k = 0; k <= L; ++k) {
-        for (int z = 0; z <= k; ++z) {
-          it->x = L-k;
-          it->y = k-z;
-          it->z = z;
-          ++it;
-        }
-      }
-    }
-
-    auto begin() const {
-      return this->orbitals_;
-    }
-
-    auto end() const {
-      return this->orbitals_ + nbf(this->L);
-    }
-
-  private:
-    Orbital orbitals_[RYSQ_MAX_CART];
-
-  };
-
-  inline int nbf(const Shell &s) {
-    return nbf(s.L);
-  }
-
-  template<class ... Args>
-  int nbf(const Shell &s, Args&& ... args) {
-    return nbf(s)*nbf(args...);
-  }
-
-
-  template<class P_, class Q_, class R_>
-  struct BraKet {
-    P_ P;
-    Q_ Q;
-    R_ R;
-    int L() const {
-      return P.L + Q.L + R.L;
-    }
-    std::string str() const {
-      return (
-        "(" + std::to_string(P.L) + std::to_string(Q.L) +
-        "|" +
-        std::to_string(R.L) + ")"
-        );
-    }
-  };
-
-  struct Kernel {
-
-    const Shell P,Q,R;
-
-    virtual bool compute(const Vector3&, const Vector3&, const Vector3&, double *buffer) = 0;
-
-    Kernel(const BraKet<Shell,Shell,Shell> &braket)
-      : P(braket.P), Q(braket.Q), R(braket.R)
+    Kernel2e(const Bra &bra, const Ket &ket)
+      : bra(bra), ket(ket)
     {
     }
 
-    virtual ~Kernel() {}
+    virtual ~Kernel2e() {}
 
-    size_t flops() const {
-      int N = (P.L + Q.L + R.L)/2 + 1;
-      return N*3*nbf(P,Q,R);
+    template<class ... Rs>
+    const double* compute(const Rs& ... rs) {
+      static_assert(
+        sizeof...(Rs) == (Bra::size + Ket::size),
+        "wrong number of shell centers"
+      );
+      return this->compute(shell::centers<Bra,Ket>{rs...});
     }
+
+    virtual const double* compute(const shell::centers<Bra,Ket>&) = 0;
 
   };
 
-  std::unique_ptr<Kernel> kernel(const BraKet<Shell,Shell,Shell> &braket);
+
+
+  template<class Bra, class Ket>
+  size_t flops(const Kernel2e<Bra,Ket> &kernel) {
+    int N = (L(kernel.bra) + L(kernel.ket))/2 + 1;
+    return N*3*nbf(kernel.bra)*nbf(kernel.ket);
+  }
+
+  template<class Bra, class Ket>
+  std::string str(const Kernel2e<Bra,Ket> &kernel) {
+    return "[" + shell::str(kernel.bra) + "|" + shell::str(kernel.ket) + "]";
+  }
+
+  typedef Kernel2e< Bra<1>, Ket<1> > Kernel2e2;
+  typedef Kernel2e< Bra<2>, Ket<1> > Kernel2e3;
+  typedef Kernel2e< Bra<2>, Ket<2> > Kernel2e4;
+
+  std::unique_ptr<Kernel2e2> kernel(const Bra<1> &bra, const Ket<1> &ket);
+
+  std::unique_ptr<Kernel2e3> kernel(const Bra<2> &bra, const Ket<1> &ket);
+
+  std::unique_ptr<Kernel2e4> kernel(const Bra<2> &bra, const Ket<2> &ket);
 
 }
 

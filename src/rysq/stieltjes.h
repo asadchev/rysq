@@ -15,6 +15,8 @@ namespace rysq {
     RYSQ_GPU_ENABLED
     bool compute(double x, double *X, double *W) const {
 
+      static_assert(N > 0, "N > 0");
+
       struct { double X[K], W[K]; } grid;
       double a[N], b[N];
 
