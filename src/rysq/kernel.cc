@@ -2,8 +2,9 @@
 #include "rysq/roots.h"
 #include "rysq/vector.h"
 
-#include <vector>
 #include <cassert>
+#include <functional>
+#include <vector>
 
 namespace rysq {
 

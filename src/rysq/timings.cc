@@ -1,12 +1,17 @@
 #include "rysq/rysq.h"
 
-#include <papi.h>
+#if __has_include(<papi.h>)
+# define RYSQ_HAS_PAPI
+# include <papi.h>
+#endif
 #include <iostream>
-#include <assert.h>
+#include <cassert>
+#include <functional>
 #include <stdexcept>
 #include <vector>
 #include <chrono>
 
+#ifdef RYSQ_HAS_PAPI
 struct PAPI {
 
   static void Init() {
@@ -33,7 +38,7 @@ struct PAPI {
   };
 
 };
-
+#endif  // RYSQ_HAS_PAPI
 
 inline double timeit(size_t N, std::function<void(size_t)> f) {
   typedef std::chrono::high_resolution_clock clock;
@@ -64,7 +69,9 @@ int main() {
 
   Vector3 r0 = { 0, 0, 0 };
 
-  //PAPI::Init();
+#ifdef RYSQ_HAS_PAPI
+  PAPI::Init();
+#endif
 
   double average = 0;
   for (int p = 0; p <= RYSQ_MAX_AM; ++p) {
