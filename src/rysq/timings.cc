@@ -108,4 +108,22 @@ int main() {
   }
   std::cout << "Kernel [XX|XX] av. time: " << average << std::endl;
 
+  std::vector<Shell::Primitive> prims;
+  for (int i = 1; i <= 6; ++i) {
+    prims.push_back({i/10.0, i*10.0});
+  }
+
+  for (int p = 1; p <= RYSQ_MAX_AM; ++p) {
+    std::cout << "Kernel [XX|XX]:" << std::endl;
+    for (size_t k : { 1, 2, 4, 8, 16, 32, 36, 0 }) {
+      Shell P = { p, prims };
+      Shell Q = { 2, 1.0, 1.0 };
+      Shell R = { p, prims };
+      Shell S = { 2, 1.0, 1.0 };
+      double average = time_kernel(rysq::kernel({P,Q}, {R,S}, Parameters{0,k}), r0, r0, r0, r0);
+      std::cout << "  K=" << k << " time: " << average << std::endl;
+    }
+  }
+
+
 }
