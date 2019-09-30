@@ -90,7 +90,7 @@ namespace rysq {
     int N,
     int mi, int mj,
     double rij,
-    double *G, double *I)
+    double * __restrict__ G, double * __restrict__ I)
   {
 #define G(a,i) G[a+(i)*N]
     for (int i = 0; i <= mi; ++i) {
@@ -101,6 +101,10 @@ namespace rysq {
     }
     for (int j = 1; j <= mj; ++j) {
       for (int i = 0; i <= mi+mj-j; ++i) {
+        // for (int a = 0; a < N-N%R; a += R) {
+        //   auto g = r*simd::load(&G(a,i)) + simd::load(&G(a,i+1));
+        //   simd::store(&G(a,i), g);
+        // }
         for (int a = 0; a < N; ++a) {
           G(a,i) = rij*G(a,i) + G(a,i+1);
         }
@@ -160,11 +164,14 @@ namespace rysq {
           l1_cache_size()/(sizeof(double)*K1),
           l2_cache_size()/(sizeof(double)*K2)
         );
+#ifdef RYSQ_VECTORIZE
+        K = simd::size()*std::max<size_t>(K/simd::size(), 1);
+#endif
         K = std::min<size_t>(nprims(bra)*nprims(ket), K);
         this->params_.K = std::max<size_t>(1,K);
+        //printf("K1=%i, K2=%i, K=%i\n", int(8*K*K1), int(8*K*K2), int(K));
       }
       assert(this->params_.K);
-      //printf("K1=%i, K2=%i, K=%i\n", int(8*K*K1), int(8*K*K2), int(K));
     }
 
     Parameters params_;
@@ -197,8 +204,14 @@ namespace rysq {
       size_t T = (N*(P.L+1)*(Q.L+1)*(R.L+S.L+1));
       size_t G = (N*(P.L+Q.L+1)*(R.L+S.L+1));
 
+#ifdef RYSQ_VECTORIZE
+      static const size_t alignment = simd::size();
+#else
+      static const size_t alignment = 1;
+#endif
+
       if (!buffer_) {
-        buffer_.reset(new double[nbf + K*I*3 + G+T+I]);
+        buffer_.reset(new double[nbf + alignment-1 + K*I*3 + G+T+I]);
       }
       double *ptr = buffer_.get();
 
@@ -206,6 +219,7 @@ namespace rysq {
       buffer.results = ptr;
       ptr += nbf;
 
+      ptr = align(ptr, alignment);
       for (size_t x = 0; x < 3; ++x) {
         buffer.I[x] = ptr;
         ptr += K*I;
@@ -387,6 +401,21 @@ namespace rysq {
 
     static inline double inner_loop(int K, const double *Ix, const double *Iy, const double *Iz) {
       int NK = N*K;
+#ifdef RYSQ_VECTORIZE
+      static const int R = simd::size();
+      if (NK%R == 0) {
+        assert(size_t(Ix)%(R*sizeof(double)) == 0);
+        auto r = simd::zero();
+        for (int a = 0; a < NK; a += R) {
+          r += simd::load(Ix+a)*simd::load(Iy+a)*simd::load(Iz+a);
+        }
+        // double v = 0;
+        // for (int a = NK-NK%R; a < NK; ++a) {
+        //   v += Ix[a]*Iy[a]*Iz[a];
+        // }
+        return simd::hadd(r);
+      }
+#endif
       double v = 0;
       for (int a = 0; a < NK; ++a) {
         v += Ix[a]*Iy[a]*Iz[a];
