@@ -15,6 +15,7 @@ message(STATUS "CXX Flags: ${CMAKE_CXX_FLAGS}")
 project("rysq" CXX)
 
 find_package(Boost REQUIRED)
+find_package(CUDA)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
