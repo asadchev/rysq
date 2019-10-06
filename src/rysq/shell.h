@@ -14,6 +14,7 @@
 namespace rysq {
 namespace shell {
 
+  RYSQ_GPU_ENABLED
   inline int nbf(int L) {
     int n = L+1;
     return ((n*n+n)/2);
@@ -52,12 +53,19 @@ namespace shell {
       }
     }
 
+    RYSQ_GPU_ENABLED
     auto begin() const {
       return this->orbitals_;
     }
 
+    RYSQ_GPU_ENABLED
     auto end() const {
       return this->orbitals_ + nbf(this->L);
+    }
+
+    RYSQ_GPU_ENABLED
+    const auto& operator[](int idx) const {
+      return orbitals_[idx];
     }
 
   private:
@@ -103,16 +111,18 @@ namespace shell {
 
   };
 
-
+  RYSQ_GPU_ENABLED
   inline int nbf(const Shell &s) {
     return nbf(s.L);
   }
 
+  RYSQ_GPU_ENABLED
   inline int nbf(const Shell::Unit &s) {
     return 1;
   }
 
   template<class ... Args>
+  RYSQ_GPU_ENABLED
   int nbf(const Shell &s, Args&& ... args) {
     return nbf(s)*nbf(args...);
   }
@@ -125,7 +135,9 @@ namespace shell {
   struct Tuple<1> {
     static const size_t size = 1;
     Shell first;
+    RYSQ_GPU_ENABLED
     const auto& get(std::integral_constant<int,0>) const { return first; }
+    RYSQ_GPU_ENABLED
     auto get(std::integral_constant<int,1>) const { return Shell::Unit{}; }
   };
 
@@ -134,11 +146,14 @@ namespace shell {
     static const size_t size = 2;
     Shell first;
     Shell second;
+    RYSQ_GPU_ENABLED
     const auto& get(std::integral_constant<int,0>) const { return first; }
+    RYSQ_GPU_ENABLED
     const auto& get(std::integral_constant<int,1>) const { return second; }
   };
 
   template<int K, int N>
+  RYSQ_GPU_ENABLED
   auto get(const Tuple<N> &t)
     -> decltype(t.get(std::integral_constant<int,K>{}))
   {
@@ -146,16 +161,19 @@ namespace shell {
   }
 
   template<int N>
+  RYSQ_GPU_ENABLED
   inline int L(const Tuple<N> &t) {
     return (get<0>(t).L + get<1>(t).L);
   }
 
   template<int N>
+  RYSQ_GPU_ENABLED
   inline int nbf(const Tuple<N> &t) {
     return nbf(get<0>(t))*nbf(get<1>(t));
   }
 
   template<int N>
+  RYSQ_GPU_ENABLED
   inline int nprims(const Tuple<N> &t) {
     return get<0>(t).prims.size()*get<1>(t).prims.size();
   }
