@@ -11,6 +11,10 @@ struct Vector {
 
   double data[N] = {};
 
+  static constexpr int size() {
+    return N;
+  }
+
   T operator[](int idx) const {
     return data[idx];
   }

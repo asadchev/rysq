@@ -68,61 +68,64 @@ int main() {
 
   //PAPI::Init();
 
-  double average = 0;
-  for (int p = 0; p <= RYSQ_MAX_AM; ++p) {
-    for (int q = 0; q <= RYSQ_MAX_AM; ++q) {
-      Shell P = { p, 1.0, 1.0 };
-      Shell R = { q, 1.0, 1.0 };
-      average += time_kernel(rysq::kernel({P}, {R}), r0, r0);
-    }
-  }
-  std::cout << "Kernel [X|X] av. time: " << average << std::endl;
+  // double average = 0;
+  // for (int p = 0; p <= RYSQ_MAX_AM; ++p) {
+  //   for (int q = 0; q <= RYSQ_MAX_AM; ++q) {
+  //     Shell P = { p, 1.0, 1.0 };
+  //     Shell R = { q, 1.0, 1.0 };
+  //     average += time_kernel(rysq::kernel({P}, {R}), r0, r0);
+  //   }
+  // }
+  // std::cout << "Kernel [X|X] av. time: " << average << std::endl;
 
 
-  average = 0;
-  for (int p = 0; p <= RYSQ_MAX_AM; ++p) {
-    for (int q = 0; q <= RYSQ_MAX_AM; ++q) {
-      for (int r = 0; r <= RYSQ_MAX_AM; ++r) {
-        Shell P = { p, 1.0, 1.0 };
-        Shell Q = { q, 1.0, 1.0 };
-        Shell R = { r, 1.0, 1.0 };
-        average += time_kernel(rysq::kernel({P,Q}, {R}), r0, r0, r0);
-      }
-    }
-  }
-  std::cout << "Kernel [XX|X] av. time: " << average << std::endl;
+  // average = 0;
+  // for (int p = 0; p <= RYSQ_MAX_AM; ++p) {
+  //   for (int q = 0; q <= RYSQ_MAX_AM; ++q) {
+  //     for (int r = 0; r <= RYSQ_MAX_AM; ++r) {
+  //       Shell P = { p, 1.0, 1.0 };
+  //       Shell Q = { q, 1.0, 1.0 };
+  //       Shell R = { r, 1.0, 1.0 };
+  //       average += time_kernel(rysq::kernel({P,Q}, {R}), r0, r0, r0);
+  //     }
+  //   }
+  // }
+  // std::cout << "Kernel [XX|X] av. time: " << average << std::endl;
 
-  average = 0;
-  for (int p = 0; p <= RYSQ_MAX_AM; ++p) {
-    for (int q = 0; q <= RYSQ_MAX_AM; ++q) {
-      for (int r = 0; r <= RYSQ_MAX_AM; ++r) {
-        for (int s = 0; s <= RYSQ_MAX_AM; ++s) {
-          Shell P = { p, 1.0, 1.0 };
-          Shell Q = { q, 1.0, 1.0 };
-          Shell R = { r, 1.0, 1.0 };
-          Shell S = { s, 1.0, 1.0 };
-          average += time_kernel(rysq::kernel({P,Q}, {R,S}), r0, r0, r0, r0);
-        }
-      }
-    }
-  }
-  std::cout << "Kernel [XX|XX] av. time: " << average << std::endl;
+  // average = 0;
+  // for (int p = 0; p <= RYSQ_MAX_AM; ++p) {
+  //   for (int q = 0; q <= RYSQ_MAX_AM; ++q) {
+  //     for (int r = 0; r <= RYSQ_MAX_AM; ++r) {
+  //       for (int s = 0; s <= RYSQ_MAX_AM; ++s) {
+  //         Shell P = { p, 1.0, 1.0 };
+  //         Shell Q = { q, 1.0, 1.0 };
+  //         Shell R = { r, 1.0, 1.0 };
+  //         Shell S = { s, 1.0, 1.0 };
+  //         average += time_kernel(rysq::kernel({P,Q}, {R,S}), r0, r0, r0, r0);
+  //       }
+  //     }
+  //   }
+  // }
+  // std::cout << "Kernel [XX|XX] av. time: " << average << std::endl;
 
   std::vector<Shell::Primitive> prims;
   for (int i = 1; i <= 6; ++i) {
     prims.push_back({i/10.0, i*10.0});
   }
 
+  for (int ket : { 1, 2 }) {
   for (int p = 1; p <= RYSQ_MAX_AM; ++p) {
-    std::cout << "Kernel [XX|XX]:" << std::endl;
+    printf("Kernel [%i%i|%i%i]:\n", p, p, ket, ket);
+    //for (size_t k : { 4 }) { //
     for (size_t k : { 1, 2, 4, 8, 16, 32, 36, 0 }) {
       Shell P = { p, prims };
-      Shell Q = { 2, 1.0, 1.0 };
-      Shell R = { p, prims };
-      Shell S = { 2, 1.0, 1.0 };
+      Shell Q = { p, 1.0, 1.0 };
+      Shell R = { ket, prims };
+      Shell S = { ket, 1.0, 1.0 };
       double average = time_kernel(rysq::kernel({P,Q}, {R,S}, Parameters{0,k}), r0, r0, r0, r0);
       std::cout << "  K=" << k << " time: " << average << std::endl;
     }
+  }
   }
 
 
