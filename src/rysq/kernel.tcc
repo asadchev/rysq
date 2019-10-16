@@ -10,15 +10,6 @@
 namespace rysq {
 
   template<int N>
-  static void recurrence(
-    int m,
-    const double *B0, const double *B1, const double *C,
-    const double *Gm1, const double *Gm2,
-    double *Gm)
-  {
-  }
-
-  template<int N>
   static inline void recurrence(
     int m, int n,
     double A, double B,
@@ -383,15 +374,38 @@ namespace rysq {
       };
 
       double * __restrict__ ptr = buffer.results;
+      const size_t nbf_p_mod3 = nbf(P)%3;
+      assert(nbf_p_mod3 <= 1);
+
       for (auto s = S.begin(); s != S.end(); ++s) {
         for (auto r = R.begin(); r != R.end(); ++r) {
           for (auto q = Q.begin(); q != Q.end(); ++q) {
-            for (auto p = P.begin(); p != P.end(); ++p) {
-              auto *Ix = I[0] + index(p->x, q->x, r->x, s->x);
-              auto *Iy = I[1] + index(p->y, q->y, r->y, s->y);
-              auto *Iz = I[2] + index(p->z, q->z, r->z, s->z);
-              double v = inner_loop(K, Ix, Iy, Iz);
-              *ptr++ += SQRT_4_POW_PI_5*v;
+            auto p = P.begin();
+            // chunk 3
+            for (; p < P.end()-nbf_p_mod3; p += 3) {
+              const double *Ix[3], *Iy[3], *Iz[3];
+              for (size_t i = 0; i < 3; ++i) {
+                Ix[i] = I[0] + index(p[i].x, q->x, r->x, s->x);
+                Iy[i] = I[1] + index(p[i].y, q->y, r->y, s->y);
+                Iz[i] = I[2] + index(p[i].z, q->z, r->z, s->z);
+              };
+              auto v = inner_loop(K, Ix, Iy, Iz);
+              for (size_t i = 0; i < v.size(); ++i) {
+                *ptr++ += SQRT_4_POW_PI_5*v[i];
+              }
+            }
+            //if (p != P.end()) {
+            for (; p != P.end(); ++p) {
+              const double *Ix[1], *Iy[1], *Iz[1];
+              for (size_t i = 0; i < 1; ++i) {
+                Ix[i] = I[0] + index(p[i].x, q->x, r->x, s->x);
+                Iy[i] = I[1] + index(p[i].y, q->y, r->y, s->y);
+                Iz[i] = I[2] + index(p[i].z, q->z, r->z, s->z);
+              };
+              auto v = inner_loop(K, Ix, Iy, Iz);
+              for (size_t i = 0; i < v.size(); ++i) {
+                *ptr++ += SQRT_4_POW_PI_5*v[i];
+              }
             }
           }
         }
@@ -399,29 +413,57 @@ namespace rysq {
 
     }
 
-    static inline double inner_loop(int K, const double *Ix, const double *Iy, const double *Iz) {
+    template<int B>
+    static inline Vector<double,B> inner_loop(
+      int K,
+      const double* (&Ix)[B],
+      const double* (&Iy)[B],
+      const double* (&Iz)[B])
+    {
       int NK = N*K;
 #ifdef RYSQ_VECTORIZE
       static const int R = simd::size();
       if (NK%R == 0) {
-        assert(size_t(Ix)%(R*sizeof(double)) == 0);
-        auto r = simd::zero();
-        for (int a = 0; a < NK; a += R) {
-          r += simd::load(Ix+a)*simd::load(Iy+a)*simd::load(Iz+a);
-        }
-        // double v = 0;
-        // for (int a = NK-NK%R; a < NK; ++a) {
-        //   v += Ix[a]*Iy[a]*Iz[a];
-        // }
-        return simd::hadd(r);
+        return inner_loop_simd(K, Ix, Iy, Iz);
       }
 #endif
-      double v = 0;
-      for (int a = 0; a < NK; ++a) {
-        v += Ix[a]*Iy[a]*Iz[a];
+      Vector<double,B> v;
+      for (size_t i = 0; i < B; ++i) {
+        for (int a = 0; a < NK; ++a) {
+          v[i] += Ix[i][a]*Iy[i][a]*Iz[i][a];
+        }
       }
       return v;
     }
+
+#ifdef RYSQ_VECTORIZE
+    template<int B>
+    static inline Vector<double,B> inner_loop_simd(
+      int K,
+      const double* (&Ix)[B],
+      const double* (&Iy)[B],
+      const double* (&Iz)[B])
+    {
+      const int NK = N*K;
+      static const int R = simd::size();
+      assert(size_t(Ix[0])%(R*sizeof(double)) == 0);
+      typedef decltype(simd::zero()) V;
+      alignas(sizeof(V)) V v[B];
+      for (size_t i = 0; i < B; ++i) {
+        v[i] = simd::zero();
+      }
+      for (int a = 0; a < NK; a += R) {
+        for (size_t i = 0; i < B; ++i) {
+          v[i] += simd::load(Ix[i]+a)*simd::load(Iy[i]+a)*simd::load(Iz[i]+a);
+        }
+      }
+      Vector<double,B> r;
+      for (size_t i = 0; i < B; ++i) {
+        r[i] = simd::hadd(v[i]);
+      }
+      return r;
+    }
+#endif
 
   };
 
