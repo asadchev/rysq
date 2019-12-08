@@ -7,7 +7,7 @@ namespace rysq {
 
   struct Zero {
     template<typename T>
-    operator T() const { return T(0); }
+    explicit operator T() const { return T(0); }
     operator double() const { return double(0); }
   };
 
