@@ -98,7 +98,7 @@ namespace shell {
         return this;
       }
     private:
-      friend class Unit;
+      friend struct Unit;
       explicit Iterator(int index)
         : index_(index)
       {
