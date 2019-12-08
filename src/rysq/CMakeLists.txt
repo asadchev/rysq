@@ -9,14 +9,15 @@ if (CUDA_FOUND)
   add_subdirectory(cuda)
 endif()
 
+if (TARGET Boost::headers)
+  add_executable(validate-executable  EXCLUDE_FROM_ALL validate.cc)
+  target_link_libraries(validate-executable librysq Boost::headers)
 
-add_executable(validate-executable  EXCLUDE_FROM_ALL validate.cc)
-target_link_libraries(validate-executable librysq)
-
-add_custom_target(validate
-  DEPENDS validate-executable
-  COMMAND validate-executable
+  add_custom_target(validate
+    DEPENDS validate-executable
+    COMMAND validate-executable
   )
+endif (TARGET Boost::headers)
 
 
 add_executable(timings-executable  EXCLUDE_FROM_ALL timings.cc)
