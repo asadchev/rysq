@@ -1,4 +1,5 @@
 add_library(librysq SHARED rysq.cc)
+set_target_properties(librysq PROPERTIES OUTPUT_NAME rysq)
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
 
